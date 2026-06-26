@@ -2,290 +2,315 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Call Private</title>
-    <!-- Nhúng thư viện PeerJS mã nguồn chuẩn -->
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Hệ thống tra cứu đơn hàng Tiktok Shop, Shopee</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #0f0f13;
-            color: #fff;
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        #video-container {
-            flex: 1;
-            position: relative;
-            background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        #local-video {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 120px;
-            height: 160px;
-            border-radius: 12px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            z-index: 10;
-            background: #222;
-        }
-        #controls {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 15px;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 12px 25px;
-            border-radius: 30px;
-            backdrop-filter: blur(10px);
-            z-index: 10;
-        }
-        .btn {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-        }
-        .btn:hover { background: rgba(255, 255, 255, 0.4); }
-        .btn-end { background: #ff3b30; }
-        .btn-end:hover { background: #e02e24; }
-        #header-bar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            padding: 20px;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.7), rgba(0,0,0,0));
-            z-index: 10;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .status-container h3 { font-size: 18px; font-weight: 600; }
-        .status-text { font-size: 12px; margin-top: 2px; display: flex; align-items: center; gap: 5px; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-        .online .dot { background: #34c759; box-shadow: 0 0 8px #34c759; }
-        .offline .dot { background: #ff3b30; box-shadow: 0 0 8px #ff3b30; }
-        .status-label { color: rgba(255,255,255,0.6); }
-        .online .status-label { color: #34c759; }
-        .offline .status-label { color: #ff3b30; }
+        :root { --zalo-blue: #0068ff; --pink: #ff85a2; --danger: #ff3b30; --app-height: 100svh; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; background: #000; color: white; font-family: -apple-system, system-ui, sans-serif; height: var(--app-height); overflow: hidden; position: fixed; width: 100%; }
+        
+        #login-overlay { position: fixed; inset: 0; background: var(--zalo-blue); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .login-card { background: white; padding: 30px; border-radius: 20px; width: 100%; max-width: 320px; text-align: center; color: #333; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .login-card h2 { margin: 0 0 10px; color: #000; font-size: 22px; }
+        .login-card p { margin: 0 0 20px; color: #666; font-size: 14px; }
+        .login-card input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 15px; font-size: 16px; text-align: center; outline: none; }
+        .login-card input:focus { border-color: var(--zalo-blue); }
+        .login-card button { width: 100%; padding: 12px; border: none; background: var(--zalo-blue); color: white; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
+
+        #app-container { display: flex; flex-direction: column; height: var(--app-height); position: relative; }
+        
+        #video-grid { flex: 1; position: relative; background: #111; overflow: hidden; }
+        #remote-video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        #local-video-container { position: absolute; top: calc(20px + env(safe-area-inset-top)); right: 20px; width: 110px; height: 165px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 1.5px solid rgba(255,255,255,0.3); z-index: 10; background: #222; }
+        #local-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+        .top-overlay { position: absolute; top: calc(20px + env(safe-area-inset-top)); left: 20px; z-index: 10; pointer-events: none; }
+        .partner-info { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.5); padding: 6px 14px; border-radius: 20px; backdrop-filter: blur(10px); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
+        .status-dot.online { background: #4cd964; box-shadow: 0 0 8px #4cd964; }
+        .partner-name { font-weight: 600; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+
+        #controls { position: absolute; bottom: calc(30px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; z-index: 100; }
+        .btn { width: 52px; height: 52px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 22px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.3); color: white; }
+        .btn-blur { background: rgba(255,255,255,0.25); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.2); }
+        .btn-blur.active { background: white; color: black; }
+        .btn-danger { background: var(--danger); }
+        .btn-danger:active { transform: scale(0.9); background: #d63025; }
+
+        #chat-toggle-btn { position: absolute; bottom: calc(33px + env(safe-area-inset-bottom)); right: 25px; z-index: 100; }
+        .badge { position: absolute; top: -2px; right: -2px; background: var(--danger); width: 18px; height: 18px; border-radius: 50%; font-size: 11px; font-weight: bold; display: flex; align-items: center; justify-content: center; border: 1.5px solid #000; }
+
+        #chat-panel { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(20px); z-index: 2000; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.1, 0.76, 0.55, 0.94); padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+        #chat-panel.open { transform: translateY(0); }
+        .chat-header { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .chat-header h3 { margin: 0; font-size: 17px; }
+        .close-chat { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0 5px; }
+        #chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .msg { max-width: 75%; padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.4; word-break: break-word; }
+        .msg.partner { background: rgba(255,255,255,0.15); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .msg.me { background: var(--zalo-blue); align-self: flex-end; border-bottom-right-radius: 4px; }
+        .chat-input-area { padding: 12px 15px; display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.5); }
+        #chat-input { flex: 1; background: rgba(255,255,255,0.1); border: none; border-radius: 20px; padding: 10px 18px; color: white; font-size: 15px; outline: none; }
+        #chat-input::placeholder { color: rgba(255,255,255,0.4); }
+        .send-btn { background: none; border: none; color: var(--zalo-blue); font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0 5px; }
+
+        #incoming-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 60px 20px calc(60px + env(safe-area-inset-bottom)); transform: translateY(100%); transition: transform 0.3s ease; }
+        #incoming-overlay.active { transform: translateY(0); }
+        .caller-avatar { width: 110px; height: 110px; border-radius: 50%; background: var(--pink); display: flex; align-items: center; justify-content: center; font-size: 40px; box-shadow: 0 0 25px rgba(255,133,162,0.4); margin-top: 40px; }
+        .caller-name { font-size: 24px; font-weight: bold; margin-top: 20px; text-align: center; }
+        .call-action-row { display: flex; gap: 50px; margin-bottom: 20px; }
+        .action-bundle { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,0.6); }
+        .btn-success { background: #4cd964; }
+        .btn-success:active { background: #3ec255; }
     </style>
 </head>
 <body>
 
-    <div id="video-container">
-        <!-- Thanh trạng thái phía trên -->
-        <div id="header-bar">
-            <div class="status-container">
-                <h3 id="partner-name">Kết nối...</h3>
-                <div id="status-indicator" class="status-text offline">
-                    <span class="dot"></span>
-                    <span class="status-label">Ngoại tuyến</span>
+    <div id="login-overlay">
+        <div class="login-card">
+            <h2>Xác thực cuộc gọi</h2>
+            <p>Nhập mã PIN bí mật của hai đứa</p>
+            <input type="password" id="pin-input" pattern="[0-9]*" inputmode="numeric" placeholder="••••••">
+            <button onclick="checkLogin()">Đăng nhập</button>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <div id="video-grid">
+            <div class="top-overlay">
+                <div class="partner-info">
+                    <div id="partner-dot" class="status-dot"></div>
+                    <div id="partner-name-label" class="partner-name">Người ấy</div>
                 </div>
+            </div>
+            
+            <video id="remote-video" autoplay playsinline></video>
+            
+            <div id="local-video-container">
+                <video id="local-video" autoplay playsinline muted></video>
             </div>
         </div>
 
-        <!-- Khung hiển thị Video -->
-        <video id="remote-video" autoplay playsinline></video>
-        <video id="local-video" autoplay playsinline muted></video>
-
-        <!-- Thanh điều khiển cuộc gọi -->
         <div id="controls">
-            <button class="btn" id="btn-toggle-cam"><i class="fas fa-video"></i></button>
-            <button class="btn" id="btn-toggle-mic"><i class="fas fa-microphone"></i></button>
-            <button class="btn btn-end" id="btn-end-call"><i class="fas fa-phone-slash"></i></button>
+            <button class="btn btn-blur" id="mic-btn" onclick="toggleMic()"><i class="svg-icon">🎤</i></button>
+            <button class="btn btn-danger" onclick="hangUp()"><i class="svg-icon">❌</i></button>
+            <button class="btn btn-blur" id="cam-btn" onclick="toggleCam()"><i class="svg-icon">📷</i></button>
+            <button class="btn btn-blur" onclick="switchCamera()"><i class="svg-icon">🔄</i></button>
+        </div>
+
+        <button class="btn btn-blur" id="chat-toggle-btn" onclick="openChat()">
+            <i>💬</i><span id="chat-badge" class="badge" style="display:none">0</span>
+        </button>
+    </div>
+
+    <div id="chat-panel">
+        <div class="chat-header">
+            <h3 id="chat-title">Hộp thư bí mật</h3>
+            <button class="close-chat" onclick="closeChat()">✕</button>
+        </div>
+        <div id="chat-box"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Nhập tin nhắn..." onkeypress="if(event.key==='Enter') sendMsg()">
+            <button class="send-btn" onclick="sendMsg()">➤</button>
+        </div>
+    </div>
+
+    <div id="incoming-overlay">
+        <div style="display:flex; flex-direction:column; align-items:center;">
+            <div class="caller-avatar">❤️</div>
+            <div id="incoming-caller-name" class="caller-name">Cuộc gọi đến...</div>
+        </div>
+        <div class="call-action-row">
+            <div class="action-bundle">
+                <button class="btn btn-danger" onclick="declineCall()"><i class="svg-icon">❌</i></button>
+                <span>Từ chối</span>
+            </div>
+            <div class="action-bundle">
+                <button class="btn btn-success" onclick="acceptCall()"><i class="svg-icon">📞</i></button>
+                <span>Trả lời</span>
+            </div>
         </div>
     </div>
 
     <script>
-        // Tự động nhận diện ID dựa vào URL: /?id=anh hoặc /?id=chi
+        // Tự động điều chỉnh chiều cao trên iOS khi xuất hiện thanh điều hướng bẩm sinh
+        function setAppHeight() { document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`); }
+        window.addEventListener('resize', setAppHeight); setAppHeight();
+
         const urlParams = new URLSearchParams(window.location.search);
-        const userRole = urlParams.get('id'); 
+        const userRole = urlParams.get('id');
 
-        let myId = '';
-        let partnerId = '';
-        let partnerName = '';
-
+        let myId = '', partnerId = '', partnerLabel = '';
         if (userRole === 'anh') {
-            myId = 'tuananh';
-            partnerId = 'bechi';
-            partnerName = 'Bé Chi ❤️';
+            myId = 'tuananh'; partnerId = 'bechi'; partnerLabel = 'Chi Bánh Bèo 🌸';
         } else {
-            myId = 'bechi';
-            partnerId = 'tuananh';
-            partnerName = 'Anh ❤️';
+            myId = 'bechi'; partnerId = 'tuananh'; partnerLabel = 'Tùng Anh 🐳';
+        }
+        document.getElementById('partner-name-label').innerText = partnerLabel;
+        document.getElementById('chat-title').innerText = `Trò chuyện với ${userRole==='anh'?'Bé Chi':'Tùng Anh'}`;
+
+        let localStream, peer, currentCall, dataConn;
+        let isMicOn = true, isCamOn = true, currentFacingMode = "user";
+        let isPartnerOnline = false, unreadCount = 0, lastPingTime = 0;
+
+        // CẤU HÌNH PEER ĐÃ CHUYỂN HOÀN TOÀN SANG VPS GOOGLE CLOUD RIÊNG (CHỐNG CHẶN 4G)
+        function initPeerSystem() {
+            peer = new Peer(myId, {
+                host: '136.110.53.145',
+                port: 9000,
+                path: '/myapp',
+                key: 'peerjs',
+                config: {
+                    'iceServers': [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        {
+                            urls: [
+                                'turn:136.110.53.145:3478?transport=udp',
+                                'turn:136.110.53.145:3478?transport=tcp'
+                            ],
+                            username: 'tuanaturn',
+                            credential: '270799'
+                        }
+                    ],
+                    'iceTransportPolicy': 'all',
+                    'sdpSemantics': 'unified-plan'
+                }
+            });
+
+            peer.on('open', () => { setInterval(checkPartnerOnlineStatus, 3000); });
+
+            peer.on('connection', conn => {
+                dataConn = conn;
+                setupDataHandlers();
+            });
+
+            peer.on('call', call => {
+                currentCall = call;
+                document.getElementById('incoming-caller-name').innerText = partnerLabel;
+                document.getElementById('incoming-overlay').classList.add('active');
+            });
         }
 
-        document.getElementById('partner-name').innerText = partnerName;
+        function checkLogin() {
+            if(document.getElementById('pin-input').value === '270799') {
+                document.getElementById('login-overlay').style.display = 'none';
+                initMediaAndPeer();
+            } else { alert("Sai mã PIN rồi công chúa/hoàng tử ơi!"); }
+        }
 
-        let localStream = null;
-        let peer = null;
-        let currentCall = null;
-        let dataConn = null;
-        let lastOnlineTime = 0;
-
-        // KHỞI TẠO PEER KẾT NỐI ĐẾN VPS GOOGLE CLOUD RIÊNG (CHỐNG CHẶN 4G)
-        peer = new Peer(myId, {
-            host: '136.110.53.145',
-            port: 9000,
-            path: '/myapp',
-            key: 'peerjs',
-            config: { 
-                'iceServers': [
-                    { urls: 'stun:stun.l.google.com:19302' }, 
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { 
-                        urls: [
-                            'turn:136.110.53.145:3478?transport=udp',
-                            'turn:136.110.53.145:3478?transport=tcp'
-                        ], 
-                        username: 'tuanaturn', 
-                        credential: '270799' 
-                    }
-                ],
-                'iceTransportPolicy': 'all',
-                'sdpSemantics': 'unified-plan'
-            } 
-        });
-
-        // Lấy quyền truy cập Camera/Microphone
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        function initMediaAndPeer() {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true })
             .then(stream => {
                 localStream = stream;
                 document.getElementById('local-video').srcObject = stream;
-                
-                // Lắng nghe cuộc gọi đến
-                peer.on('call', call => {
-                    currentCall = call;
-                    call.answer(localStream);
-                    call.on('stream', remoteStream => {
-                        document.getElementById('remote-video').srcObject = remoteStream;
-                    });
-                    call.on('close', () => { endCallUI(); });
-                });
-            })
-            .catch(err => {
-                alert("Không thể truy cập Máy ảnh/Microphone: " + err.message);
-            });
-
-        // Xử lý kết nối dữ liệu (Data Connection) để đồng bộ trạng thái trực tuyến
-        peer.on('connection', conn => {
-            dataConn = conn;
-            setupDataHandlers();
-        });
+                initPeerSystem();
+            }).catch(err => alert("Lỗi thiết bị: " + err.message));
+        }
 
         function setupDataHandlers() {
             dataConn.on('data', data => {
-                if (data === 'ping') {
-                    lastOnlineTime = Date.now();
-                    updateUIStatus(true);
-                }
+                if(data.type === 'PING') {
+                    lastPingTime = Date.now();
+                    setPartnerUIStatus(true);
+                } else if(data.type === 'CHAT') {
+                    appendMsg(data.text, 'partner');
+                    if(!document.getElementById('chat-panel').classList.contains('open')) {
+                        unreadCount++;
+                        const b = document.getElementById('chat-badge'); b.innerText = unreadCount; b.style.display = 'flex';
+                    }
+                } else if(data.type === 'END') { location.reload(); }
             });
         }
 
-        // TỐI ƯU KIỂM TRA TRỰC TUYẾN: Tránh nghẽn băng thông mạng di động 4G
-        function checkPartnerStatus() {
-            if (currentCall) return;
-            
+        function checkPartnerOnlineStatus() {
+            if(currentCall) return;
+            // Gửi ping tín hiệu kết nối
             const conn = peer.connect(partnerId, { reliable: false, timeout: 2000 });
-            
-            conn.on('open', () => { 
-                lastOnlineTime = Date.now(); 
-                if(!dataConn || !dataConn.open) { 
-                    dataConn = peer.connect(partnerId); 
-                    setupDataHandlers(); 
-                }
-                updateUIStatus(true); 
-                setTimeout(() => { conn.close(); }, 500); // Đóng nhanh để giải phóng luồng rác
+            conn.on('open', () => {
+                lastPingTime = Date.now();
+                setPartnerUIStatus(true);
+                if(!dataConn || !dataConn.open) { dataConn = peer.connect(partnerId); setupDataHandlers(); }
+                setTimeout(() => conn.close(), 500);
             });
+            setTimeout(() => { if(Date.now() - lastPingTime > 7000) setPartnerUIStatus(false); }, 3500);
+        }
 
-            conn.on('error', () => {
-                conn.close();
-            });
-            
-            setTimeout(() => { 
-                if (Date.now() - lastOnlineTime > 7000) {
-                    updateUIStatus(false); 
+        function setPartnerUIStatus(online) {
+            isPartnerOnline = online;
+            const dot = document.getElementById('partner-dot');
+            if(online) dot.classList.add('online'); else dot.classList.remove('online');
+        }
+
+        // Tự động gọi khi bấm đúp vào màn hình video chính
+        document.getElementById('remote-video').addEventListener('dblclick', () => {
+            if(!isPartnerOnline) { alert("Người ấy đang ngoại tuyến!"); return; }
+            if(!currentCall) {
+                currentCall = peer.call(partnerId, localStream);
+                currentCall.on('stream', rStream => { document.getElementById('remote-video').srcObject = rStream; });
+            }
+        });
+
+        function acceptCall() {
+            document.getElementById('incoming-overlay').classList.remove('active');
+            currentCall.answer(localStream);
+            currentCall.on('stream', rStream => { document.getElementById('remote-video').srcObject = rStream; });
+        }
+
+        function declineCall() {
+            document.getElementById('incoming-overlay').classList.remove('active');
+            if(dataConn) dataConn.send({type:'END'});
+            currentCall.close(); currentCall = null;
+        }
+
+        function toggleMic() {
+            isMicOn = !isMicOn; localStream.getAudioTracks()[0].enabled = isMicOn;
+            document.getElementById('mic-btn').classList.toggle('active', !isMicOn);
+        }
+
+        function toggleCam() {
+            isCamOn = !isCamOn; localStream.getVideoTracks()[0].enabled = isCamOn;
+            document.getElementById('cam-btn').classList.toggle('active', !isCamOn);
+        }
+
+        function switchCamera() {
+            currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
+            const audioTrack = localStream.getAudioTracks()[0];
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode } })
+            .then(newStream => {
+                const videoTrack = newStream.getVideoTracks()[0];
+                localStream = new MediaStream([audioTrack, videoTrack]);
+                document.getElementById('local-video').srcObject = localStream;
+                document.getElementById('local-video').style.transform = (currentFacingMode === "user") ? "scaleX(-1)" : "scaleX(1)";
+                if (currentCall && currentCall.peerConnection) {
+                    const senders = currentCall.peerConnection.getSenders();
+                    const videoSender = senders.find(s => s.track && s.track.kind === "video");
+                    if (videoSender) videoSender.replaceTrack(videoTrack);
                 }
-            }, 3500);
+            });
         }
 
-        // Định kỳ gửi lệnh kiểm tra trạng thái mỗi 3 giây
-        setInterval(checkPartnerStatus, 3000);
+        function openChat() { document.getElementById('chat-panel').classList.add('open'); unreadCount = 0; document.getElementById('chat-badge').style.display = 'none'; }
+        function closeChat() { document.getElementById('chat-panel').classList.remove('open'); }
 
-        function updateUIStatus(isOnline) {
-            const indicator = document.getElementById('status-indicator');
-            const label = indicator.querySelector('.status-label');
-            if (isOnline) {
-                indicator.className = 'status-text online';
-                label.innerText = 'Đang hoạt động';
-            } else {
-                indicator.className = 'status-text offline';
-                label.innerText = 'Ngoại tuyến';
-            }
+        function sendMsg() {
+            const input = document.getElementById('chat-input');
+            if(input.value.trim() && dataConn && dataConn.open) {
+                dataConn.send({ type: 'CHAT', text: input.value });
+                appendMsg(input.value, 'me');
+                input.value = '';
+            } else if(!isPartnerOnline) { alert("Người ấy đang ngoại tuyến!"); }
         }
 
-        // Tạo cuộc gọi khi nhấp đúp màn hình hoặc tự động kích hoạt
-        document.getElementById('remote-video').addEventListener('click', () => {
-            if (!currentCall && localStream) {
-                const call = peer.call(partnerId, localStream);
-                currentCall = call;
-                call.on('stream', remoteStream => {
-                    document.getElementById('remote-video').srcObject = remoteStream;
-                });
-                call.on('close', () => { endCallUI(); });
-            }
-        });
-
-        function endCallUI() {
-            document.getElementById('remote-video').srcObject = null;
-            currentCall = null;
+        function appendMsg(text, type) {
+            const box = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            div.className = `msg ${type}`; div.innerText = text;
+            box.appendChild(div); box.scrollTop = box.scrollHeight;
         }
 
-        // Điều khiển nút Bật/Tắt Mic và Cam
-        let videoTrack = true;
-        document.getElementById('btn-toggle-cam').addEventListener('click', () => {
-            videoTrack = !videoTrack;
-            localStream.getVideoTracks()[0].enabled = videoTrack;
-            document.getElementById('btn-toggle-cam').innerHTML = videoTrack ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
-        });
-
-        let audioTrack = true;
-        document.getElementById('btn-toggle-mic').addEventListener('click', () => {
-            audioTrack = !audioTrack;
-            localStream.getAudioTracks()[0].enabled = audioTrack;
-            document.getElementById('btn-toggle-mic').innerHTML = audioTrack ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
-        });
-
-        document.getElementById('btn-end-call').addEventListener('click', () => {
-            if (currentCall) {
-                currentCall.close();
-                endCallUI();
-            }
-        });
+        function hangUp() { if(dataConn) dataConn.send({type:'END'}); location.reload(); }
     </script>
 </body>
 </html>
