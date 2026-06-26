@@ -134,7 +134,6 @@
     </div>
 
     <script>
-        // Tự động điều chỉnh chiều cao trên iOS khi xuất hiện thanh điều hướng bẩm sinh
         function setAppHeight() { document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`); }
         window.addEventListener('resize', setAppHeight); setAppHeight();
 
@@ -154,18 +153,15 @@
         let isMicOn = true, isCamOn = true, currentFacingMode = "user";
         let isPartnerOnline = false, unreadCount = 0, lastPingTime = 0;
 
-        // CẤU HÌNH PEER ĐÃ CHUYỂN HOÀN TOÀN SANG VPS GOOGLE CLOUD RIÊNG (CHỐNG CHẶN 4G)
         function initPeerSystem() {
+            // GIỮ NGUYÊN CƠ CHẾ KHỞI TẠO PEER CŨ QUA SERVER PUBLIC CỦA PEERJS
             peer = new Peer(myId, {
-                host: '136.110.53.145',
-                port: 9000,
-                path: '/myapp',
-                key: 'peerjs',
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
                         { urls: 'stun:stun1.l.google.com:19302' },
                         {
+                            // CHỈ THAY ĐỔI DUY NHẤT IP TURN SERVER MỚI TRÊN VPS GOOGLE CLOUD TẠI ĐÂY
                             urls: [
                                 'turn:136.110.53.145:3478?transport=udp',
                                 'turn:136.110.53.145:3478?transport=tcp'
@@ -179,7 +175,23 @@
                 }
             });
 
-            peer.on('open', () => { setInterval(checkPartnerOnlineStatus, 3000); });
+            peer.on('open', () => {
+                // Giữ nguyên logic khởi tạo kết nối dataConn ban đầu để check trạng thái
+                dataConn = peer.connect(partnerId);
+                setupDataHandlers();
+                
+                setInterval(() => {
+                    if (dataConn && dataConn.open) {
+                        dataConn.send({ type: 'PING' });
+                    }
+                }, 2000);
+
+                setInterval(() => {
+                    if (Date.now() - lastPingTime > 6000) {
+                        setPartnerUIStatus(false);
+                    }
+                }, 3000);
+            });
 
             peer.on('connection', conn => {
                 dataConn = conn;
@@ -214,6 +226,10 @@
                 if(data.type === 'PING') {
                     lastPingTime = Date.now();
                     setPartnerUIStatus(true);
+                    dataConn.send({ type: 'PONG' });
+                } else if(data.type === 'PONG') {
+                    lastPingTime = Date.now();
+                    setPartnerUIStatus(true);
                 } else if(data.type === 'CHAT') {
                     appendMsg(data.text, 'partner');
                     if(!document.getElementById('chat-panel').classList.contains('open')) {
@@ -224,26 +240,12 @@
             });
         }
 
-        function checkPartnerOnlineStatus() {
-            if(currentCall) return;
-            // Gửi ping tín hiệu kết nối
-            const conn = peer.connect(partnerId, { reliable: false, timeout: 2000 });
-            conn.on('open', () => {
-                lastPingTime = Date.now();
-                setPartnerUIStatus(true);
-                if(!dataConn || !dataConn.open) { dataConn = peer.connect(partnerId); setupDataHandlers(); }
-                setTimeout(() => conn.close(), 500);
-            });
-            setTimeout(() => { if(Date.now() - lastPingTime > 7000) setPartnerUIStatus(false); }, 3500);
-        }
-
         function setPartnerUIStatus(online) {
             isPartnerOnline = online;
             const dot = document.getElementById('partner-dot');
             if(online) dot.classList.add('online'); else dot.classList.remove('online');
         }
 
-        // Tự động gọi khi bấm đúp vào màn hình video chính
         document.getElementById('remote-video').addEventListener('dblclick', () => {
             if(!isPartnerOnline) { alert("Người ấy đang ngoại tuyến!"); return; }
             if(!currentCall) {
